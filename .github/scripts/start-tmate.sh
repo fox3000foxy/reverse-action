@@ -97,9 +97,10 @@ periodic_save &
 periodic_save_pid=$!
 
 # Start tmate using the prepared ~/.bashrc (detached, so disconnecting client does not stop the job)
-# The shell is wrapped in a loop so an "exit" does not kill the session entirely.
-# (It will restart the shell and allow reconnecting.)
-tmate -S /tmp/tmate.sock new-session -d "bash -lc 'while true; do bash --rcfile $HOME/.bashrc -i; done'"
+# Configure tmux to keep the session alive even if the shell exits.
+tmate -S /tmp/tmate.sock new-session -d "bash --rcfile $HOME/.bashrc -i"
+# Keep the tmux session alive after the shell exits so clients can reconnect.
+tmate -S /tmp/tmate.sock set-option -g remain-on-exit on
 sleep 2
 
 tmate_ssh=$(tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}')
