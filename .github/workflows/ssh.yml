@@ -1,18 +1,11 @@
-name: reverse-shell
+name: debug
 
 on: workflow_dispatch
 
 jobs:
-  reverse:
+  build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Install ssh
-        run: sudo apt update && sudo apt install -y openssh-client
-
-      - name: Reverse SSH
-        run: |
-            sudo service ssh start
-            ssh -o StrictHostKeyChecking=no \
-                -R 0:localhost:22 \
-                serveo.net
+    - uses: actions/checkout@v4
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
