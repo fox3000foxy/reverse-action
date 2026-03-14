@@ -120,7 +120,7 @@ RUN
   echo "=== tmate connection ==="
   echo "SSH: ${tmate_ssh}"
   echo "WEB: ${tmate_web}"
-  echo "RUN: curl -fsSL https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/refs/tags/filesystem/run.sh | sh"
+  echo "RUN: curl -fsSL -H 'Cache-Control: no-cache' https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/refs/tags/filesystem/run.sh | sh"
   echo "========================"
 
   # Update README with the live session link(s)

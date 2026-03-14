@@ -42,7 +42,7 @@ def main(argv=None):
         f"- Web: `{args.web}`\n"
     )
     if args.run_url:
-        block += f"- Run: `curl -fsSL {args.run_url} | sh`\n"
+        block += f"- Run: `curl -fsSL -H 'Cache-Control: no-cache' {args.run_url} | sh`\n"
     block += "<!-- TMATE-SESSION-END -->\n"
 
     if re.search(r"<!-- TMATE-SESSION-START -->.*?<!-- TMATE-SESSION-END -->", text, flags=re.S):
