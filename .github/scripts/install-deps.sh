@@ -9,11 +9,10 @@
 set -euo pipefail
 
 cache_dir="${GITHUB_WORKSPACE:-$(pwd)}/.apt-cache"
-mkdir -p "$cache_dir/archives" "$cache_dir/lists"
+mkdir -p "$cache_dir/archives/partial" "$cache_dir/lists/partial"
 
 # Ensure the cache directory is writable by both the runner and the _apt user.
-# apt may run as _apt internally, so set open permissions (no need for specific group).
-sudo mkdir -p "$cache_dir"
+# apt may run as _apt internally, so we give wide permissions to all subdirs (including partial).
 sudo chmod -R 0777 "$cache_dir"
 
 cat > "$cache_dir/apt-cache.conf" <<EOF
