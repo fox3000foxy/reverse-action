@@ -56,13 +56,13 @@ else
   export PS1="\[\e[37;1m\][\[\e[32;1m\]${user_display}\[\e[37;1m\]@\[\e[34;1m\]${host_display}\[\e[0m\] \W\[\e[37;1m\]]\[\e[0m\]\$ "
 fi
 
-# Make "exit" detach instead of killing the tmux session, so reconnect works.
+# Make "exit" open a fresh shell window in the tmate session before closing.
+# This keeps the session alive and makes reconnecting behave like a new shell.
 exit() {
-  if [ -n "$TMUX" ]; then
-    tmux detach-client
-  else
-    builtin exit "$@"
+  if command -v tmate >/dev/null 2>&1; then
+    tmate new-window -n shell "bash --rcfile $HOME/.bashrc -i" >/dev/null 2>&1 || true
   fi
+  builtin exit "$@"
 }
 
 alias ls="ls --color=auto"
