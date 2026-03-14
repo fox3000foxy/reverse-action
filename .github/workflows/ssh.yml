@@ -17,19 +17,10 @@ jobs:
         with:
           persist-credentials: true
 
-      - name: Cache apt packages
-        uses: actions/cache@v4
+      - name: Cache & install APT packages (tmate + watcher)
+        uses: awalsh128/cache-apt-pkgs-action@v1.6.0
         with:
-          path: |
-            ${{ github.workspace }}/.apt-cache/archives
-            ${{ github.workspace }}/.apt-cache/lists
-          key: ${{ runner.os }}-apt-${{ hashFiles('/etc/apt/sources.list', '/etc/apt/sources.list.d/**/*.list') }}
-          restore-keys: |
-            ${{ runner.os }}-apt-
-
-      - name: Install tmate + filesystem watcher
-        run: |
-          bash .github/scripts/install-deps.sh
+          packages: tmate inotify-tools
 
       - name: Start tmate session + autosave to tag "filesystem"
         run: |
