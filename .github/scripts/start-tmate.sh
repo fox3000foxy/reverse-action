@@ -96,25 +96,35 @@ periodic_save() {
 periodic_save &
 periodic_save_pid=$!
 
-# Start tmate using the prepared ~/.bashrc (detached, so disconnecting client does not stop the job)
-# Configure tmux to keep the session alive even if the shell exits.
-tmate -S /tmp/tmate.sock new-session -d "bash --rcfile $HOME/.bashrc -i"
-# Keep the tmux session alive after the shell exits so clients can reconnect.
-tmate -S /tmp/tmate.sock set-option -g remain-on-exit on
-sleep 2
+# Start tmate in a loop so we can restart it automatically if the session ends.
+# This makes reconnecting stable even after "exit".
+while true; do
+  tmate -S /tmp/tmate.sock new-session -d "bash --rcfile $HOME/.bashrc -i"
+  # Keep the tmux session alive after the shell exits so clients can reconnect.
+  tmate -S /tmp/tmate.sock set-option -g remain-on-exit on
 
-tmate_ssh=$(tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}')
-tmate_web=$(tmate -S /tmp/tmate.sock display -p '#{tmate_web}')
+  sleep 2
 
-source "$HOME/.bashrc"
+  tmate_ssh=$(tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}')
+  tmate_web=$(tmate -S /tmp/tmate.sock display -p '#{tmate_web}')
 
-echo "=== tmate connection ==="
-echo "SSH: ${tmate_ssh}"
-echo "WEB: ${tmate_web}"
-echo "========================"
+  source "$HOME/.bashrc"
 
-# Update README with the live session link(s)
-python3 "$RUNNER_SCRIPTS_DIR/scripts/update_readme.py" --ssh "$tmate_ssh" --web "$tmate_web"
+  echo "=== tmate connection ==="
+  echo "SSH: ${tmate_ssh}"
+  echo "WEB: ${tmate_web}"
+  echo "========================"
+
+  # Update README with the live session link(s)
+  python3 "$RUNNER_SCRIPTS_DIR/scripts/update_readme.py" --ssh "$tmate_ssh" --web "$tmate_web"
+
+  # Wait until tmate session is gone, then restart it
+  while tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}' >/dev/null 2>&1; do
+    sleep 2
+  done
+
+  echo "tmate session ended; restarting..."
+done
 
 # keep the job alive indefinitely (or until timeout/cancel)
 # Emit periodic output to avoid GitHub Actions idle-timeout killing the job.

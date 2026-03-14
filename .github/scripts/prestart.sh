@@ -59,13 +59,12 @@ else
   export PS1="\[\e[37;1m\][\[\e[32;1m\]${user_display}\[\e[37;1m\]@\[\e[34;1m\]${host_display}\[\e[0m\] \W\[\e[37;1m\]]\[\e[0m\]\$ "
 fi
 
-# Make "exit" detach from the tmate session instead of killing it.
-# This allows reconnecting later without losing the session.
-exit() {
+# Provide a helper to detach from the tmate session without exiting the shell.
+# Users can run "tmate-detach" instead of "exit" if they want to keep the session alive.
+tmate-detach() {
   if command -v tmate >/dev/null 2>&1; then
     tmate detach 2>/dev/null || true
   fi
-  builtin exit "$@"
 }
 
 alias ls="ls --color=auto"
