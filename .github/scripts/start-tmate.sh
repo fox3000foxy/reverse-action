@@ -111,7 +111,7 @@ while true; do
   # Write a helper script that can be fetched via raw URL and executed to connect.
   cat > run.sh <<RUN
 #!/usr/bin/env sh
-exec ssh ${tmate_ssh}
+${tmate_ssh}
 RUN
   chmod +x run.sh
 
