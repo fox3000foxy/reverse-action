@@ -37,6 +37,10 @@ tmate-detach() {
   fi
 }
 
+# Ensure Ctrl+D triggers the same cleanup path as running "exit".
+# This avoids leaving orphaned tmate processes when the shell exits via EOF.
+bind -x '"\C-d": "exit"'
+
 exit() {
     killall -9 -u "$(whoami)" tmate 2>/dev/null || true
     builtin exit "$@"
