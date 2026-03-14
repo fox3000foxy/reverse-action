@@ -41,8 +41,9 @@ commit_and_push() {
 }
 
 autosave() {
-  # Watch filesystem changes (ignore hidden files/dirs like .bashrc, .apt-cache, etc.) and commit/push immediately
-  while inotifywait -qq -r -e modify,create,delete,move --exclude '(^|/)\.' .; do
+  # Watch filesystem changes (ignore Git metadata and local cache dirs) and commit/push immediately
+  while inotifywait -qq -r -e modify,create,delete,move --exclude '(^|/)(\.git|\.apt-cache)(/|$)' .; do
+    echo "[autosave] change detected"
     commit_and_push
     # debounce bursty changes (same file saved multiple times quickly)
     sleep 1
