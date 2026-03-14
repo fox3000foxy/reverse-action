@@ -64,8 +64,8 @@ commit_and_push() {
 autosave &
 autosave_pid=$!
 
-# Start tmate and show connection info (detached, so disconnecting client does not stop the job)
-tmate -S /tmp/tmate.sock new-session -d
+# Start tmate using the prepared ~/.bashrc (detached, so disconnecting client does not stop the job)
+tmate -S /tmp/tmate.sock new-session -d "bash --rcfile $HOME/.bashrc -i"
 sleep 2
 
 tmate_ssh=$(tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}')
