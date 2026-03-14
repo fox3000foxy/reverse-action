@@ -40,9 +40,10 @@ def main(argv=None):
         "## Live tmate session\n\n"
         f"- SSH: `{args.ssh}`\n"
         f"- Web: `{args.web}`\n"
-        + (f"- Run: `curl -fsSL {args.run_url} | sh`\n" if args.run_url else "")
-        "<!-- TMATE-SESSION-END -->"
     )
+    if args.run_url:
+        block += f"- Run: `curl -fsSL {args.run_url} | sh`\n"
+    block += "<!-- TMATE-SESSION-END -->\n"
 
     if re.search(r"<!-- TMATE-SESSION-START -->.*?<!-- TMATE-SESSION-END -->", text, flags=re.S):
         text = re.sub(
