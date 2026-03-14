@@ -125,7 +125,7 @@ while true; do
   python3 "$RUNNER_SCRIPTS_DIR/scripts/update_readme.py" \
     --ssh "$tmate_ssh" \
     --web "$tmate_web" \
-    --run-cmd "gh api -H 'Accept: application/vnd.github.v3.raw' /repos/${GITHUB_REPOSITORY}/contents/run.sh?ref=filesystem | sh"
+    --run-cmd "ssh \"\$(gh api -H 'Accept: application/vnd.github.v3.raw' \"/repos/${GITHUB_REPOSITORY}/contents/host.conf?ref=filesystem\" | tr -d '\r\n')\""
 
   # Wait until tmate session is gone, then restart it
   while tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}' >/dev/null 2>&1; do
