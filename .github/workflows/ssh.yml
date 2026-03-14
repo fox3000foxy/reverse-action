@@ -29,16 +29,18 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Checkout from the filesystem tag (or start a fresh branch if it doesn't exist)
+          # Checkout from the filesystem tag (or start a fresh local branch if it doesn't exist)
+          # Use a branch name different from the tag to avoid Git ambiguity when pushing.
           if git rev-parse -q --verify "refs/tags/filesystem" >/dev/null; then
-            git checkout -B filesystem refs/tags/filesystem
+            git checkout -B filesystem-workspace refs/tags/filesystem
           else
-            git checkout -B filesystem
+            git checkout -B filesystem-workspace
           fi
 
           push_tag() {
             git tag -f filesystem
-            git push origin --force filesystem
+            # Push tag explicitly (avoid "matches more than one" when a branch has the same name)
+            git push origin --force refs/tags/filesystem:refs/tags/filesystem
           }
 
           # Ensure the filesystem tag exists for next run
