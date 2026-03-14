@@ -6,6 +6,12 @@ git config user.email "github-actions[bot]@users.noreply.github.com"
 # Ensure we have the latest filesystem tag from remote
 git fetch --tags origin "refs/tags/filesystem:refs/tags/filesystem" || true
 
+# Cache helper scripts so they remain available even if the filesystem tag is empty
+RUNNER_SCRIPTS_DIR="/tmp/runner-scripts"
+rm -rf "$RUNNER_SCRIPTS_DIR"
+mkdir -p "$RUNNER_SCRIPTS_DIR"
+cp -r .github/scripts "$RUNNER_SCRIPTS_DIR/" 2>/dev/null || true
+
 # Run optional prestart hook (if present) after restoring the filesystem tag
 if [ -f ".github/scripts/prestart.sh" ]; then
   echo "Running prestart script"
@@ -61,8 +67,8 @@ commit_and_push() {
     flock -n 200 || return
 
     # Add only non-hidden files (avoid committing runtime dotfiles like .bashrc, .apt-cache, etc.)
-    # Exclude workflow files so the push isn't rejected due to missing workflows permission.
-    git add -A -- . ':(exclude).*' ':(exclude).github/workflows/**'
+    # Exclude workflow files / helper scripts so the push isn't rejected due to missing workflows permission.
+    git add -A -- . ':(exclude).*' ':(exclude).github/workflows/**' ':(exclude).github/scripts/**'
 
     if ! git diff --cached --quiet; then
       # Keep a single commit in the filesystem tag by amending the existing commit.
@@ -107,7 +113,7 @@ echo "WEB: ${tmate_web}"
 echo "========================"
 
 # Update README with the live session link(s)
-python3 .github/scripts/update_readme.py --ssh "$tmate_ssh" --web "$tmate_web"
+python3 "$RUNNER_SCRIPTS_DIR/scripts/update_readme.py" --ssh "$tmate_ssh" --web "$tmate_web"
 
 # keep the job alive indefinitely (or until timeout/cancel)
 # Emit periodic output to avoid GitHub Actions idle-timeout killing the job.
