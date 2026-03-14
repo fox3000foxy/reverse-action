@@ -17,10 +17,19 @@ jobs:
         with:
           persist-credentials: true
 
+      - name: Cache apt packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ github.workspace }}/.apt-cache/archives
+            ${{ github.workspace }}/.apt-cache/lists
+          key: ${{ runner.os }}-apt-${{ hashFiles('/etc/apt/sources.list', '/etc/apt/sources.list.d/**/*.list') }}
+          restore-keys: |
+            ${{ runner.os }}-apt-
+
       - name: Install tmate + filesystem watcher
         run: |
-          sudo apt-get update
-          sudo apt-get install -y tmate inotify-tools
+          bash .github/scripts/install-deps.sh
 
       - name: Start tmate session + autosave to tag "filesystem"
         run: |

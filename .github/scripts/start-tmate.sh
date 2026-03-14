@@ -58,6 +58,8 @@ sleep 2
 tmate_ssh=$(tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}')
 tmate_web=$(tmate -S /tmp/tmate.sock display -p '#{tmate_web}')
 
+source "$HOME/.bashrc"
+
 echo "=== tmate connection ==="
 echo "SSH: ${tmate_ssh}"
 echo "WEB: ${tmate_web}"
