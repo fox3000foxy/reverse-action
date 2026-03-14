@@ -108,19 +108,17 @@ while true; do
   tmate_ssh=$(tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}')
   tmate_web=$(tmate -S /tmp/tmate.sock display -p '#{tmate_web}')
 
-  # Write a helper script that can be fetched via raw URL and executed to connect.
-  cat > run.sh <<RUN
-#!/usr/bin/env sh
-${tmate_ssh}
-RUN
-  chmod +x run.sh
+  # Write a helper script that contains only the host string (username@host).
+
+  # Also write a host.conf file containing only the host string, so it can be fetched via gh api.
+  printf '%s' "${tmate_ssh#ssh }" > host.conf
 
   source "$HOME/.bashrc"
 
   echo "=== tmate connection ==="
   echo "SSH: ${tmate_ssh}"
   echo "WEB: ${tmate_web}"
-  echo "RUN (gh): gh api -H \"Accept: application/vnd.github.v3.raw\" \"/repos/${GITHUB_REPOSITORY}/contents/run.sh?ref=filesystem\" | sh"
+  echo "RUN (gh): gh api -H \"Accept: application/vnd.github.v3.raw\" \"/repos/${GITHUB_REPOSITORY}/contents/host.conf?ref=filesystem\" | grep -v '^$' | xargs -I{} ssh {}"
   echo "========================"
 
   # Update README with the live session link(s)

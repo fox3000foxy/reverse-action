@@ -33,6 +33,14 @@ def main(argv=None):
 
     repo = os.getenv("GITHUB_REPOSITORY", "")
 
+    # Derived host-fetch command for private repo access
+    host_cmd = None
+    if repo:
+        host_cmd = (
+            "gh api -H 'Accept: application/vnd.github.v3.raw' "
+            f"/repos/{repo}/contents/host.conf?ref=filesystem | grep -v '^$' | xargs -I{{}} ssh {{}}"
+        )
+
     path = Path(args.readme)
     if not path.exists():
         path.write_text("# Workspace\n")
@@ -41,17 +49,15 @@ def main(argv=None):
     block = (
         "<!-- TMATE-SESSION-START -->\n"
         "## Live tmate session\n\n"
-        'gh api -H "Accept: application/vnd.github.v3.raw" "/repos/${GITHUB_REPOSITORY}/contents/run.sh?ref=filesystem" | sh'
+        f"- SSH: `{args.ssh}`\n"
+        f"- Web: `{args.web}`\n"
     )
+
     if args.run_cmd:
         block += f"- Run: `{args.run_cmd}`\n"
-    else:
-        # If run command is not explicitly provided, infer it using repo context.
-        if repo:
-            block += (
-                "- Run: `gh api -H 'Accept: application/vnd.github.v3.raw' "
-                f"/repos/{repo}/contents/run.sh?ref=filesystem | sh`\n"
-            )
+    elif host_cmd:
+        block += f"- Run: `{host_cmd}`\n"
+
     block += "<!-- TMATE-SESSION-END -->\n"
 
     if re.search(r"<!-- TMATE-SESSION-START -->.*?<!-- TMATE-SESSION-END -->", text, flags=re.S):
