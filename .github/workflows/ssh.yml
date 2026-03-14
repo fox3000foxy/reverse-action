@@ -29,10 +29,15 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Checkout from the filesystem tag (or start a fresh local branch if it doesn't exist)
-          # Use a branch name different from the tag to avoid Git ambiguity when pushing.
+          # Ensure we have the latest filesystem tag from remote
+          git fetch --tags origin "refs/tags/filesystem:refs/tags/filesystem" || true
+
+          # Checkout the tag content into a working branch so we can modify it.
+          # Reset/clean to ensure the working tree matches the tag exactly.
           if git rev-parse -q --verify "refs/tags/filesystem" >/dev/null; then
             git checkout -B filesystem-workspace refs/tags/filesystem
+            git reset --hard refs/tags/filesystem
+            git clean -fdx
           else
             git checkout -B filesystem-workspace
           fi
