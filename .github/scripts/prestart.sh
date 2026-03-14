@@ -16,10 +16,6 @@
 
 set -euo pipefail
 
-# Set HOME to the current repository workspace (so ~ points to the repo)
-export HOME="${GITHUB_WORKSPACE:-$(pwd)}"
-cd "$HOME"
-
 # Resolve username/hostname from params.json (if present), otherwise inherit from main branch (if present), otherwise generate it.
 if [ -f params.json ]; then
   echo "[prestart] Using existing params.json"
