@@ -61,6 +61,7 @@ alias ll="ls -l"
 alias lla="ls -a"
 alias rm="rm -i"
 BASHRC
+source "$HOME/.bashrc"
 
 # Optional: show which home is used
 echo "[prestart] HOME=$HOME, pwd=$(pwd)"
