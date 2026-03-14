@@ -40,12 +40,24 @@ commit_and_push() {
 }
 
 autosave() {
-  # Watch filesystem changes (ignore .git and .github) and commit/push immediately
-  while inotifywait -qq -r -e modify,create,delete,move --exclude '(^|/)(\.git|\.github)(/|$)' .; do
+  # Watch filesystem changes (ignore hidden files/dirs like .bashrc, .apt-cache, etc.) and commit/push immediately
+  while inotifywait -qq -r -e modify,create,delete,move --exclude '(^|/)\.' .; do
     commit_and_push
     # debounce bursty changes (same file saved multiple times quickly)
     sleep 1
   done
+}
+
+commit_and_push() {
+  # Add only non-hidden files (avoid committing runtime dotfiles like .bashrc, .apt-cache, etc.)
+  git add -A -- . ':(exclude).*'
+  # Still allow explicitly tracked hidden metadata if needed (e.g., .github workflows)
+  git add -A .github 2>/dev/null || true
+
+  if ! git diff --cached --quiet; then
+    git commit -m "autosave $(date -u +%Y%m%dT%H%M%SZ)" || true
+    push_tag || true
+  fi
 }
 
 autosave &
