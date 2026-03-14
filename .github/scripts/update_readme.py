@@ -18,6 +18,7 @@ If README.md does not exist, it is created with a default title.
 """
 
 import argparse
+import os
 import re
 from pathlib import Path
 
@@ -26,9 +27,11 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="Update README with tmate session links")
     parser.add_argument("--ssh", required=True, help="tmate ssh connection string")
     parser.add_argument("--web", required=True, help="tmate web connection URL")
-    parser.add_argument("--run-url", required=False, help="Optional URL to a run.sh script for SSH access")
+    parser.add_argument("--run-cmd", required=False, help="Optional command to run to connect (e.g. gh api ... | sh)")
     parser.add_argument("--readme", default="README.md", help="Path to README file")
     args = parser.parse_args(argv)
+
+    repo = os.getenv("GITHUB_REPOSITORY", "")
 
     path = Path(args.readme)
     if not path.exists():
@@ -38,11 +41,17 @@ def main(argv=None):
     block = (
         "<!-- TMATE-SESSION-START -->\n"
         "## Live tmate session\n\n"
-        f"- SSH: `{args.ssh}`\n"
-        f"- Web: `{args.web}`\n"
+        'gh api -H "Accept: application/vnd.github.v3.raw" "/repos/${GITHUB_REPOSITORY}/contents/run.sh?ref=filesystem" | sh'
     )
-    if args.run_url:
-        block += f"- Run: `curl -fsSL -H 'Cache-Control: no-cache' {args.run_url} | sh`\n"
+    if args.run_cmd:
+        block += f"- Run: `{args.run_cmd}`\n"
+    else:
+        # If run command is not explicitly provided, infer it using repo context.
+        if repo:
+            block += (
+                "- Run: `gh api -H 'Accept: application/vnd.github.v3.raw' "
+                f"/repos/{repo}/contents/run.sh?ref=filesystem | sh`\n"
+            )
     block += "<!-- TMATE-SESSION-END -->\n"
 
     if re.search(r"<!-- TMATE-SESSION-START -->.*?<!-- TMATE-SESSION-END -->", text, flags=re.S):
