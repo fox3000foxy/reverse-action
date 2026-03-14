@@ -56,6 +56,15 @@ else
   export PS1="\[\e[37;1m\][\[\e[32;1m\]${user_display}\[\e[37;1m\]@\[\e[34;1m\]${host_display}\[\e[0m\] \W\[\e[37;1m\]]\[\e[0m\]\$ "
 fi
 
+# Make "exit" detach instead of killing the tmux session, so reconnect works.
+exit() {
+  if [ -n "$TMUX" ]; then
+    tmux detach-client
+  else
+    builtin exit "$@"
+  fi
+}
+
 alias ls="ls --color=auto"
 alias ll="ls -l"
 alias lla="ls -a"
