@@ -56,12 +56,16 @@ commit_and_push() {
     flock -n 200 || return
 
     # Add only non-hidden files (avoid committing runtime dotfiles like .bashrc, .apt-cache, etc.)
-    git add -A -- . ':(exclude).*'
-    # Still allow explicitly tracked hidden metadata if needed (e.g., .github workflows)
-    git add -A .github 2>/dev/null || true
+    # Exclude workflow files so the push isn't rejected due to missing workflows permission.
+    git add -A -- . ':(exclude).*' ':(exclude).github/workflows/**'
 
     if ! git diff --cached --quiet; then
-      git commit -m "autosave $(date -u +%Y%m%dT%H%M%SZ)" || true
+      # Keep a single commit in the filesystem tag by amending the existing commit.
+      if git rev-parse --verify HEAD >/dev/null 2>&1; then
+        git commit --amend --no-edit || true
+      else
+        git commit -m "autosave $(date -u +%Y%m%dT%H%M%SZ)" || true
+      fi
       push_tag || true
     fi
   ) 200>/tmp/tmate_autosave.lock
