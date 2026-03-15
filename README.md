@@ -1,42 +1,51 @@
-# reverse-action — Transformer un repo GitHub en VPS-like gratuit
+# reverse-action — Turn a GitHub repo into a free VPS-like runner
 
-Ce dépôt transforme un workflow GitHub Actions en **serveur SSH interactif** (un mini-VPS) avec **état persistant** entre les sessions grâce à une branche Git dédiée : **`filesystem`**.
+This repository turns a GitHub Actions workflow into an **interactive SSH server** (a mini-VPS) with **persistent state** across runs using a dedicated Git branch: **`filesystem`**.
 
-## 🚀 Concept clé : une session tmate qui survit aux runs
+## 🏁 Quick start (using this as a template)
 
-GitHub Actions exécute normalement des jobs jetables. Ici, on combine :
+1. Click **Use this template** and create a **new private repo**.
+2. In your new repo, open the **Actions** tab.
+3. Select the **debug-runner** workflow and click **Run workflow** (no inputs required).
+4. Once the run starts, open the latest run and follow the tmate session links (the README will be updated automatically).
 
-- **tmate** pour un shell interactif (SSH + web terminal)
-- une **branche Git (`filesystem`)** pour conserver l’état du système de fichiers entre les runs
-- un **workflow GitHub Actions** qui restaure l’état, démarre l’accès distant et enregistre les changements
+> ⚠️ Recommended: keep the repo private, since this exposes an interactive shell on a GitHub runner.
 
-➡️ Le résultat : un environnement distant réutilisable qui peut démarrer d’une session précédente comme sur un VPS.
+## 🚀 Key idea: a tmate session that survives runs
+
+GitHub Actions normally runs disposable jobs. Here we combine:
+
+- **tmate** for an interactive shell (SSH + web terminal)
+- a **Git branch (`filesystem`)** to persist filesystem state across runs
+- a **GitHub Actions workflow** that restores state, starts remote access, and records changes
+
+➡️ The result: a reusable remote environment that can resume from a previous session like a VPS.
 
 ---
 
-## 🧠 Comment ça marche (architecture simplifiée)
+## 🧠 How it works (simplified architecture)
 
-1. **Le workflow démarre** (via dispatch manuel ou planifié).
-2. `start-tmate.sh` restaure l’état depuis la branche `filesystem` (si elle existe), ou crée une branche vide.
-3. Le script lance `tmate`, affiche les liens SSH/web, et met à jour `README.md`.
-4. Pendant la session, toutes les modifications sont automatiquement commit/push sur la branche `filesystem`.
+1. **The workflow starts** (via manual dispatch or scheduled trigger).
+2. `start-tmate.sh` restores state from the `filesystem` branch (if it exists), or creates an empty branch.
+3. The script starts `tmate`, prints SSH/web links, and updates `README.md`.
+4. During the session, all modifications are automatically committed/pushed to the `filesystem` branch.
 
 ---
 
-## 🗂️ Branche `filesystem` : votre disque persistant
+## 🗂️ `filesystem` branch: your persistent disk
 
-La branche `filesystem` contient l’état actuel de la session : fichiers, installations, configurations, etc.
+The `filesystem` branch holds the current session state: files, installs, configs, etc.
 
-- Elle est poussée à chaque sauvegarde automatique.
-- Le workflow démarre toujours depuis son dernier état.
-- Vous pouvez réinitialiser / inspecter cette branche en utilisant Git (`git checkout filesystem`, `git log`, etc.).
+- It is pushed on every automatic save.
+- The workflow always starts from its latest state.
+- You can reset / inspect it using Git (`git checkout filesystem`, `git log`, etc.).
 
-### 🧩 Pour remettre la branche `filesystem` à zéro
+### 🧩 Resetting `filesystem` to a clean state
 
-Vous pouvez forcer la branche `filesystem` à partir d’une autre référence (ex. `main`) :
+You can force the `filesystem` branch from another ref (e.g. `main`):
 
 ```bash
-# Réinitialiser filesystem depuis main et pousser
+# Reset filesystem from main and push
 git checkout main
 git checkout -B filesystem
 git push -f origin filesystem
@@ -44,26 +53,26 @@ git push -f origin filesystem
 
 ---
 
-## 🛠️ Que contient le repo ?
+## 🛠️ What’s in this repo?
 
-- `./.github/workflows/ssh.yml` : workflow principal qui démarre la session tmate
-- `./.github/scripts/start-tmate.sh` : restaure `filesystem` + lance `tmate` + gère les sauvegardes
-- `./.github/scripts/update_readme.py` : met à jour ce README avec les liens de session live
-
----
-
-## 🔐 Attention : sécurité et usage responsable
-
-Ce système ouvre un accès distant à un runner GitHub (privé selon le repo). Ne le partagez pas publiquement, et arrêtez le workflow si vous n’en avez plus besoin.
+- `./.github/workflows/ssh.yml`: main workflow that starts the tmate session
+- `./.github/scripts/start-tmate.sh`: restores `filesystem`, starts `tmate`, and handles saving
+- `./.github/scripts/update_readme.py`: updates this README with live session links
 
 ---
 
-## ✨ En résumé
+## 🔐 Security & responsible use
 
-Ce dépôt transforme un workflow GitHub Actions en un **mini-VPS** :
+This setup exposes a remote shell on a GitHub runner (private depending on the repo). Don’t share it publicly, and stop the workflow when you’re done.
 
-- accès SSH / Web shell en direct via `tmate`
-- persistance d’état via la branche `filesystem`
-- restauration simple : la session reprend toujours là où elle s’est arrêtée
+---
 
-Prêt à l’usage pour explorer, développer ou déboguer dans un environnement Linux temporaire qui peut être restauré à tout moment.
+## ✨ Summary
+
+This repo turns a GitHub Actions workflow into a **mini-VPS**:
+
+- live SSH / web shell via `tmate`
+- persistent state via the `filesystem` branch
+- easy restore: the session always resumes where it left off
+
+Ready to use for exploring, developing, or debugging in a temporary Linux environment that can be restored at any time.
