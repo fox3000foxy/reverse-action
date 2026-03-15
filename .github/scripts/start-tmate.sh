@@ -63,6 +63,11 @@ commit_and_push() {
   (
     flock -n 200 || return
 
+    # Ensure we're up-to-date with any remote changes to filesystem before committing.
+    # (e.g. someone pushed new changes to the filesystem branch)
+    git fetch "$remote" filesystem:refs/remotes/$remote/filesystem 2>/dev/null || true
+    git merge --ff-only "refs/remotes/$remote/filesystem" 2>/dev/null || true
+
     # Add all changes (respect .gitignore). Explicitly avoid committing workflow/script changes.
     git add -A
     git reset -- .github/workflows/ .github/scripts/ 2>/dev/null || true
