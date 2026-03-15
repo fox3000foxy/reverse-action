@@ -47,16 +47,24 @@ def main(argv=None):
 
     text = path.read_text()
     block = (
-        "<!-- TMATE-SESSION-START -->\n"
-        "## Live tmate session\n\n"
-        f"- SSH: `{args.ssh}`\n"
-        f"- Web: `{args.web}`\n"
+
     )
 
-    if args.run_cmd:
-        block += f"- Run: `{args.run_cmd}`\n"
-    elif host_cmd:
-        block += f"- Run: `{host_cmd}`\n"
+    cmd = args.run_cmd or host_cmd
+    if cmd:
+        block += f"- Run: `{cmd}`\n"
+
+    if cmd:
+        block += (
+            "\n"
+            "### Connect via GitHub CLI\n\n"
+            "1. Install GitHub CLI: https://cli.github.com/\n"
+            "2. Authenticate: `gh auth login`\n"
+            "3. Run:\n\n"
+            "```bash\n"
+            f"{cmd}\n"
+            "```\n"
+        )
 
     block += "<!-- TMATE-SESSION-END -->\n"
 
