@@ -11,8 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 360
 
-    env:
-      AUTOSNAPSHOT: 1
 
     steps:
       - name: Checkout repository
@@ -25,6 +23,6 @@ jobs:
         with:
           packages: tmate inotify-tools
 
-      - name: Start tmate session + autosave to tag "filesystem"
+      - name: Start tmate session + autosave to branch "filesystem"
         run: |
           bash .github/scripts/start-tmate.sh

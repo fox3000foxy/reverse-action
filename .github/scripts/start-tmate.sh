@@ -1,46 +1,39 @@
+#!/usr/bin/env bash
 set -euo pipefail
 
 git config user.name "github-actions[bot]"
 git config user.email "github-actions[bot]@users.noreply.github.com"
 
-# Ensure we have the latest filesystem tag from remote
-# If SNAPSHOT is set, try to restore it into the filesystem tag (makes startup match a named snapshot).
-if [ -n "${SNAPSHOT:-}" ]; then
-  echo "[start-tmate] restoring snapshot: ${SNAPSHOT}"
-  git fetch --tags origin "refs/tags/snapshot/${SNAPSHOT}:refs/tags/snapshot/${SNAPSHOT}" || true
-  if git rev-parse -q --verify "refs/tags/snapshot/${SNAPSHOT}" >/dev/null; then
-    git tag -f filesystem "refs/tags/snapshot/${SNAPSHOT}"
-    git push origin --force refs/tags/filesystem:refs/tags/filesystem
-  else
-    echo "[start-tmate] snapshot '${SNAPSHOT}' not found; continuing with filesystem tag"
-  fi
-fi
+# The persistent state is stored on a dedicated branch named "filesystem".
+# Each run restores this branch into the working tree and pushes updates back.
 
-git fetch --tags origin "refs/tags/filesystem:refs/tags/filesystem" || true
+remote=${REMOTE:-origin}
 
-# Cache helper scripts so they remain available even if the filesystem tag is empty
+# Fetch the remote filesystem branch (if it exists)
+git fetch "$remote" filesystem:refs/remotes/$remote/filesystem || true
+
+# Cache helper scripts so they remain available even if the filesystem branch is empty
 RUNNER_SCRIPTS_DIR="/tmp/runner-scripts"
 rm -rf "$RUNNER_SCRIPTS_DIR"
 mkdir -p "$RUNNER_SCRIPTS_DIR"
 cp -r .github/scripts "$RUNNER_SCRIPTS_DIR/" 2>/dev/null || true
 
-# Run optional prestart hook (if present) after restoring the filesystem tag
+# Run optional prestart hook (if present) after restoring the filesystem branch
 if [ -f ".github/scripts/prestart.sh" ]; then
   echo "Running prestart script"
   bash .github/scripts/prestart.sh
 fi
 
-push_tag() {
-  git tag -f filesystem
-  # Push tag explicitly (avoid "matches more than one" when a branch has the same name)
-  git push origin --force refs/tags/filesystem:refs/tags/filesystem
+push_filesystem() {
+  # Push the current working branch into the remote "filesystem" branch
+  git push --force "$remote" "filesystem-workspace:filesystem" 2>/dev/null || true
 }
 
-# Checkout the tag content into a working branch so we can modify it.
-# Reset/clean to ensure the working tree matches the tag exactly.
-if git rev-parse -q --verify "refs/tags/filesystem" >/dev/null; then
-  git checkout -B filesystem-workspace refs/tags/filesystem
-  git reset --hard refs/tags/filesystem
+# Checkout the filesystem branch into a working branch so we can modify it.
+# Reset/clean to ensure the working tree matches the branch exactly.
+if git rev-parse -q --verify "refs/remotes/$remote/filesystem" >/dev/null; then
+  git checkout -B filesystem-workspace "refs/remotes/$remote/filesystem"
+  git reset --hard "refs/remotes/$remote/filesystem"
   # Keep cache dirs (apt cache, etc.) from being deleted and avoid permission issues
   git clean -fdx -e .apt-cache -e .cache -e host.conf -e tmate.sock
 else
@@ -49,11 +42,11 @@ else
   git rm -rf --cached . || true
   git clean -fdx -e .git -e .apt-cache -e .cache -e .github -e .github/scripts -e .github/workflows
   git commit --allow-empty -m "init filesystem (empty)" || true
-  push_tag || true
+  push_filesystem || true
 fi
 
-# Ensure the filesystem tag exists for next run
-push_tag || true
+# Ensure the filesystem branch exists for next run
+push_filesystem || true
 
 autosave() {
   # Watch filesystem changes (ignore Git metadata, caches and temporary session state) and commit/push immediately
@@ -75,24 +68,15 @@ commit_and_push() {
     git reset -- .github/workflows/ .github/scripts/ 2>/dev/null || true
 
     if ! git diff --cached --quiet; then
-      # Keep a single commit in the filesystem tag by amending the existing commit.
+      # Keep a single commit in the filesystem branch by amending the existing commit.
       if git rev-parse --verify HEAD >/dev/null 2>&1; then
         git commit --amend --no-edit || true
       else
         git commit -m "autosave $(date -u +%Y%m%dT%H%M%SZ)" || true
       fi
 
-      # Push filesystem tag for the current commit.
-      push_tag || true
-
-      # Optionally create a named snapshot tag every autosave.
-      if [ "${AUTOSNAPSHOT:-0}" = "1" ]; then
-        snap="snapshot/auto-$(date -u +%Y%m%dT%H%M%SZ)"
-        git tag -f "$snap" HEAD
-        git push -f origin "refs/tags/$snap:refs/tags/$snap" || true
-        git tag -f snapshot/latest HEAD
-        git push -f origin refs/tags/snapshot/latest:refs/tags/snapshot/latest || true
-      fi
+      # Push filesystem branch for the current commit.
+      push_filesystem || true
     fi
   ) 200>/tmp/tmate_autosave.lock
 }
@@ -102,7 +86,8 @@ autosave_pid=$!
 
 periodic_save() {
   while true; do
-    git pull
+    # Keep the local branch in sync with remote if it was updated elsewhere
+    git pull --ff-only "$remote" filesystem || true
     sleep 5
     echo "[periodic autosave]"
     commit_and_push
