@@ -17,7 +17,9 @@
 set -euo pipefail
 
 # Create a consistent bash prompt + useful aliases
-cat > "$HOME/.bashrc" <<'BASHRC'
+# (Only overwrite if we didn't already set it; this helps sessions start faster.)
+if ! grep -q "Custom prompt and aliases for remote sessions" "$HOME/.bashrc" 2>/dev/null; then
+  cat > "$HOME/.bashrc" <<'BASHRC'
 user_display="${USER:-$(whoami)}"
 host_display="$(hostname -s)"
 # Custom prompt and aliases for remote sessions (uses params.json values if present)
@@ -53,6 +55,8 @@ alias ll="ls -l"
 alias lla="ls -a"
 alias rm="rm -i"
 BASHRC
+fi
+
 source "$HOME/.bashrc"
 sudo cp "$HOME/.bashrc" /root/.bashrc 2>/dev/null || true
 

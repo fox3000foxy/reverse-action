@@ -1,0 +1,29 @@
+# Ignore runtime artifacts produced by the remote session
+# (These files should not be persisted in the "filesystem" tag.)
+
+# Session caches (keep these between reboots; they are excluded from git clean)
+.apt-cache/
+.cache/
+
+# Temporary session state
+host.conf
+tmate.sock
+
+# User shell state (regenerated each run)
+.bashrc
+.bash_profile
+.profile
+
+# Avoid accidentally committing workflow/scripts changes from within the session
+# .github/workflows/
+# .github/scripts/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+
+# Editor / OS temporary files
+*~
+*.swp
+*.swo
+.DS_Store

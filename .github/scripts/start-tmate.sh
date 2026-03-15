@@ -4,6 +4,18 @@ git config user.name "github-actions[bot]"
 git config user.email "github-actions[bot]@users.noreply.github.com"
 
 # Ensure we have the latest filesystem tag from remote
+# If SNAPSHOT is set, try to restore it into the filesystem tag (makes startup match a named snapshot).
+if [ -n "${SNAPSHOT:-}" ]; then
+  echo "[start-tmate] restoring snapshot: ${SNAPSHOT}"
+  git fetch --tags origin "refs/tags/snapshot/${SNAPSHOT}:refs/tags/snapshot/${SNAPSHOT}" || true
+  if git rev-parse -q --verify "refs/tags/snapshot/${SNAPSHOT}" >/dev/null; then
+    git tag -f filesystem "refs/tags/snapshot/${SNAPSHOT}"
+    git push origin --force refs/tags/filesystem:refs/tags/filesystem
+  else
+    echo "[start-tmate] snapshot '${SNAPSHOT}' not found; continuing with filesystem tag"
+  fi
+fi
+
 git fetch --tags origin "refs/tags/filesystem:refs/tags/filesystem" || true
 
 # Cache helper scripts so they remain available even if the filesystem tag is empty
@@ -30,12 +42,12 @@ if git rev-parse -q --verify "refs/tags/filesystem" >/dev/null; then
   git checkout -B filesystem-workspace refs/tags/filesystem
   git reset --hard refs/tags/filesystem
   # Keep cache dirs (apt cache, etc.) from being deleted and avoid permission issues
-  git clean -fdx -e .apt-cache
+  git clean -fdx -e .apt-cache -e .cache -e host.conf -e tmate.sock
 else
   # Create an empty filesystem branch (no files) to avoid importing main content
   git checkout --orphan filesystem-workspace
   git rm -rf --cached . || true
-  git clean -fdx -e .git -e .apt-cache -e .github -e .github/scripts -e .github/workflows
+  git clean -fdx -e .git -e .apt-cache -e .cache -e .github -e .github/scripts -e .github/workflows
   git commit --allow-empty -m "init filesystem (empty)" || true
   push_tag || true
 fi
@@ -44,8 +56,8 @@ fi
 push_tag || true
 
 autosave() {
-  # Watch filesystem changes (ignore Git metadata and local cache dirs) and commit/push immediately
-  while inotifywait -qq -r -e modify,create,delete,move --exclude '(^|/)(\.git|\.apt-cache)(/|$)' .; do
+  # Watch filesystem changes (ignore Git metadata, caches and temporary session state) and commit/push immediately
+  while inotifywait -qq -r -e modify,create,delete,move --exclude '(^|/)(\.git|\.apt-cache|\.cache|host\.conf|tmate\.sock|\.gitignore)(/|$)' .; do
     echo "[autosave] change detected"
     commit_and_push
     # debounce bursty changes (same file saved multiple times quickly)
@@ -58,9 +70,9 @@ commit_and_push() {
   (
     flock -n 200 || return
 
-    # Add only non-hidden files (avoid committing runtime dotfiles like .bashrc, .apt-cache, etc.)
-    # Exclude workflow files / helper scripts so the push isn't rejected due to missing workflows permission.
-    git add -A -- . ':(exclude).*' ':(exclude).github/workflows/**' ':(exclude).github/scripts/**'
+    # Add all changes (respect .gitignore). Explicitly avoid committing workflow/script changes.
+    git add -A
+    git reset -- .github/workflows/ .github/scripts/ 2>/dev/null || true
 
     if ! git diff --cached --quiet; then
       # Keep a single commit in the filesystem tag by amending the existing commit.
@@ -69,7 +81,18 @@ commit_and_push() {
       else
         git commit -m "autosave $(date -u +%Y%m%dT%H%M%SZ)" || true
       fi
+
+      # Push filesystem tag for the current commit.
       push_tag || true
+
+      # Optionally create a named snapshot tag every autosave.
+      if [ "${AUTOSNAPSHOT:-0}" = "1" ]; then
+        snap="snapshot/auto-$(date -u +%Y%m%dT%H%M%SZ)"
+        git tag -f "$snap" HEAD
+        git push -f origin "refs/tags/$snap:refs/tags/$snap" || true
+        git tag -f snapshot/latest HEAD
+        git push -f origin refs/tags/snapshot/latest:refs/tags/snapshot/latest || true
+      fi
     fi
   ) 200>/tmp/tmate_autosave.lock
 }
@@ -102,7 +125,10 @@ while true; do
   # Keep the tmux session alive after the shell exits so clients can reconnect.
   tmate -S /tmp/tmate.sock set-option -g remain-on-exit on
 
-  sleep 2
+  # Wait for tmate to generate session URLs (can take a short moment)
+  until tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}' >/dev/null 2>&1; do
+    sleep 0.2
+  done
 
   tmate_ssh=$(tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}')
   tmate_web=$(tmate -S /tmp/tmate.sock display -p '#{tmate_web}')
