@@ -43,14 +43,6 @@ fi
 # Ensure the filesystem tag exists for next run
 push_tag || true
 
-commit_and_push() {
-  git add -A
-  if ! git diff --cached --quiet; then
-    git commit -m "autosave $(date -u +%Y%m%dT%H%M%SZ)" || true
-    push_tag || true
-  fi
-}
-
 autosave() {
   # Watch filesystem changes (ignore Git metadata and local cache dirs) and commit/push immediately
   while inotifywait -qq -r -e modify,create,delete,move --exclude '(^|/)(\.git|\.apt-cache)(/|$)' .; do
